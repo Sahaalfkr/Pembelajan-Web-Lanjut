@@ -15,7 +15,14 @@
                 <i class="bi bi-cart-check"></i>
                 <span>Keranjang</span>
             </a>
-        </li><!-- End Keranjang Nav --> 
+        </li><!-- End Keranjang Nav -->
+
+        <li class="nav-item">
+            <a class="nav-link <?php echo (uri_string() == 'profil') ? "" : "collapsed" ?>" href="profil">
+                <i class="bi bi-person-circle"></i>
+                <span>Profil</span>
+            </a>
+        </li><!-- End Profil Nav -->
         <?php
         if (session()->get('role') == 'admin') {
         ?>
