@@ -121,7 +121,13 @@ class TransaksiController extends BaseController
 
         foreach ($data as $item) {
             $id = $item['id'] ?? ($item['destination_id'] ?? ($item['city_id'] ?? ($item['subdistrict_id'] ?? null)));
-            $text = $item['label'] ?? $item['name'] ?? null;
+            
+            // Try multiple field names for the text label
+            $text = $item['label'] 
+                    ?? $item['name'] 
+                    ?? $item['city_name']
+                    ?? $item['subdistrict_name']
+                    ?? null;
 
             if ($text === null) {
                 $parts = [];
@@ -157,15 +163,24 @@ class TransaksiController extends BaseController
         $response = $service->getCost($origin, $destination, $weight, $courier);
 
         $results = [];
-        $data = $response['rajaongkir']['results'][0]['costs'] ?? [];
+        
+        try {
+            // Try to access the nested cost data
+            $data = $response['rajaongkir']['results'][0]['costs'] ?? [];
 
-        foreach ($data as $item) {
-            $results[] = [
-                'service'     => $item['service'],
-                'description' => $item['description'],
-                'cost'        => $item['cost'],
-                'etd'         => $item['etd']
-            ];
+            foreach ($data as $item) {
+                // Extract the actual cost value from the cost array
+                $costValue = is_array($item['cost']) ? $item['cost'][0]['value'] : $item['cost'];
+                
+                $results[] = [
+                    'service'     => $item['service'],
+                    'description' => $item['description'],
+                    'cost'        => $costValue,
+                    'etd'         => $item['etd']
+                ];
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Costs parsing error: ' . $e->getMessage());
         }
 
         return $this->response->setJSON($results);
