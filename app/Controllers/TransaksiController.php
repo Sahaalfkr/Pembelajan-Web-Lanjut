@@ -9,11 +9,15 @@ use App\Services\RajaOngkirService;
 class TransaksiController extends BaseController
 {   
     protected $cart;
+    protected $transactionModel;
+    protected $transactionDetailModel;
 
     public function __construct()
     {
         helper(['number', 'form']);
         $this->cart = service('cart');
+        $this->transactionModel = new \App\Models\TransactionModel();
+        $this->transactionDetailModel = new \App\Models\TransactionDetailModel();
     }
     public function index()
     {  
@@ -120,22 +124,32 @@ class TransaksiController extends BaseController
         $results = [];
 
         foreach ($data as $item) {
-            $id = $item['id'] ?? ($item['destination_id'] ?? ($item['city_id'] ?? ($item['subdistrict_id'] ?? null)));
-            
-            // Try multiple field names for the text label
-            $text = $item['label'] 
-                    ?? $item['name'] 
-                    ?? $item['city_name']
-                    ?? $item['subdistrict_name']
-                    ?? null;
+            $id = $item['id'] ?? $item['destination_id'] ?? $item['subdistrict_id'] ?? $item['city_id'] ?? null;
+            $text = $item['label'] ?? $item['name'] ?? null;
 
             if ($text === null) {
                 $parts = [];
-                foreach (['subdistrict', 'city', 'province', 'postal_code'] as $key) {
-                    if (!empty($item[$key])) {
-                        $parts[] = $item[$key];
-                    }
+
+                if (!empty($item['subdistrict_name'])) {
+                    $parts[] = $item['subdistrict_name'];
                 }
+                if (!empty($item['district_name'])) {
+                    $parts[] = $item['district_name'];
+                }
+                if (!empty($item['city_name'])) {
+                    $parts[] = $item['city_name'];
+                } elseif (!empty($item['city'])) {
+                    $parts[] = $item['city'];
+                }
+                if (!empty($item['province'])) {
+                    $parts[] = $item['province'];
+                }
+                if (!empty($item['zip_code'])) {
+                    $parts[] = $item['zip_code'];
+                } elseif (!empty($item['postal_code'])) {
+                    $parts[] = $item['postal_code'];
+                }
+
                 $text = implode(', ', $parts);
             }
 
@@ -156,8 +170,12 @@ class TransaksiController extends BaseController
     {
         $origin = '64999';
         $destination = $this->request->getGet('destination');
-        $weight = '1000';
-        $courier = 'jne'; 
+        $weight = (int) ($this->request->getGet('weight') ?? 1000);
+        $courier = $this->request->getGet('courier') ?? 'jne';
+
+        if (empty($destination)) {
+            return $this->response->setJSON([]);
+        }
 
         $service = new RajaOngkirService();
         $response = $service->getCost($origin, $destination, $weight, $courier);
@@ -165,18 +183,25 @@ class TransaksiController extends BaseController
         $results = [];
         
         try {
-            // Try to access the nested cost data
-            $data = $response['rajaongkir']['results'][0]['costs'] ?? [];
+            if (!empty($response['data']) && is_array($response['data'])) {
+                $data = $response['data'];
+            } elseif (!empty($response['rajaongkir']['results'][0]['costs']) && is_array($response['rajaongkir']['results'][0]['costs'])) {
+                $data = $response['rajaongkir']['results'][0]['costs'];
+            } else {
+                $data = [];
+            }
 
             foreach ($data as $item) {
-                // Extract the actual cost value from the cost array
-                $costValue = is_array($item['cost']) ? $item['cost'][0]['value'] : $item['cost'];
-                
+                $costValue = $item['cost'];
+                if (is_array($costValue)) {
+                    $costValue = $costValue[0]['value'] ?? 0;
+                }
+
                 $results[] = [
-                    'service'     => $item['service'],
-                    'description' => $item['description'],
+                    'service'     => $item['service'] ?? ($item['code'] ?? ''),
+                    'description' => $item['description'] ?? ($item['name'] ?? ''),
                     'cost'        => $costValue,
-                    'etd'         => $item['etd']
+                    'etd'         => $item['etd'] ?? ''
                 ];
             }
         } catch (\Throwable $e) {
@@ -212,21 +237,17 @@ class TransaksiController extends BaseController
             'status'      => 0, 
         ];
 
-        // Load models
-        $transactionModel = new \App\Models\TransactionModel();
-        $transactionDetailModel = new \App\Models\TransactionDetailModel();
-
         // insert transaction
-        if (!$transactionModel->insert($transaction)) {
+        if (!$this->transactionModel->insert($transaction)) {
             $db->transRollback();
             return redirect()->back()->with('error', 'Gagal membuat transaksi');
         }
 
-        $transactionId = $transactionModel->getInsertID();
+        $transactionId = $this->transactionModel->getInsertID();
 
         // insert transaction detail
         foreach ($cartItems as $item) {
-            $transactionDetailModel->insert([
+            $this->transactionDetailModel->insert([
                 'transaction_id' => $transactionId,
                 'product_id'     => $item['id'],
                 'jumlah'         => $item['qty'],

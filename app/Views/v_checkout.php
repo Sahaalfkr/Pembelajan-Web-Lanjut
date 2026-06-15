@@ -6,7 +6,12 @@
         <?= form_open('buy', 'class="row g-3"') ?>
 
 <?= form_hidden('username', session()->get('username')) ?>
-<?= form_hidden('total_harga', (string) $total) ?>
+<?= form_input([
+    'type'  => 'hidden',
+    'name'  => 'total_harga',
+    'id'    => 'total_harga',
+    'value' => (string) $total,
+]) ?>
 
 <div class="col-12">
     <?= form_label('Nama', 'nama', ['class' => 'form-label']) ?>
@@ -30,15 +35,21 @@
 </div>
 <div class="col-12"> 
     <?= form_label('Layanan', 'layanan', ['class' => 'form-label']) ?> 
-    <?= form_dropdown('layanan', [], '', ['id' => 'layanan', 'class' => 'form-control']) ?>
+    <?= form_dropdown('layanan', [], '', ['id' => 'layanan', 'class' => 'form-control', 'disabled' => true]) ?>
 </div>
 <div class="col-12">
-    <?= form_label('Ongkir', 'ongkir', ['class' => 'form-label']) ?>
+    <?= form_label('Ongkir', 'ongkir_display', ['class' => 'form-label']) ?>
     <?= form_input([
-        'name'     => 'ongkir',
-        'id'       => 'ongkir',
+        'name'     => 'ongkir_display',
+        'id'       => 'ongkir_display',
         'class'    => 'form-control',
         'readonly' => true]) ?>
+    <?= form_input([
+        'type'  => 'hidden',
+        'name'  => 'ongkir',
+        'id'    => 'ongkir',
+        'value' => '0'
+    ]) ?>
 </div>
 <div class="col-12">
     <?= form_submit(
@@ -100,7 +111,8 @@ let subtotal = <?= (int) $total ?>;
 function hitungTotal() {
     let total = subtotal + ongkir;
 
-    $("#ongkir").val(ongkir.toLocaleString('id-ID'));
+    $("#ongkir_display").val(ongkir.toLocaleString('id-ID'));
+    $("#ongkir").val(ongkir);
     $("#total").text(`IDR ${total.toLocaleString('id-ID')}`);
     $("#total_harga").val(total);
 }
@@ -134,7 +146,8 @@ $(document).ready(function() {
 	$("#kelurahan").on('change', function () {
 	    let id_kelurahan = $(this).val();
 
-	    $("#layanan").empty();
+	    $("#layanan").html('<option value="">Pilih layanan</option>');
+	    $("#layanan").prop('disabled', true);
 	    ongkir = 0;
 	    hitungTotal(); 
 
@@ -148,11 +161,26 @@ $(document).ready(function() {
 	                destination: id_kelurahan
 	            },
 	            success: function (data) { 
+	                if (!data || data.length === 0) {
+	                    console.warn('Tidak ada layanan ongkir untuk destination:', id_kelurahan);
+	                    return;
+	                }
+
+	                $("#layanan").prop('disabled', false);
 	                data.forEach(function (item) {
-	                    $("#layanan").append(
-	                        $('<option></option>', {
-	                            value: item.cost[0].value,
-	                            text: `${item.description} (${item.service}) - estimasi ${item.etd}`
+	                    let costValue = item.cost;
+	                    if (Array.isArray(costValue)) {
+	                        costValue = costValue[0]?.value || 0;
+	                    }
+
+                    const label = item.name
+                        ? `${item.name} (${item.service}) Estimasi ${item.etd}`
+                        : `${item.description} (${item.service}) Estimasi ${item.etd}`;
+
+                    $("#layanan").append(
+                        $('<option></option>', {
+                            value: costValue,
+                            text: label
 	                        })
 	                    );
 	                });
@@ -166,7 +194,7 @@ $(document).ready(function() {
 
 	// Handle layanan (service) change
 	$("#layanan").on('change', function() {
-	    ongkir = parseInt($(this).val());
+	    ongkir = parseInt($(this).val()) || 0;
 	    hitungTotal();
 	});
 });

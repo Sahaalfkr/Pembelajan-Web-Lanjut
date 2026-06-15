@@ -42,6 +42,7 @@ class RajaOngkirService
                     'query' => [
                         'search' => $keyword,
                         'limit'  => 50,
+                        'offset' => 0,
                     ]
                 ]
             );
@@ -63,15 +64,51 @@ class RajaOngkirService
 
     private function getMockDestinations(string $keyword): array
     {
-        $mockData = [
-            'results' => [
-                ['city_id' => '26', 'province_id' => '8', 'province' => 'Jawa Tengah', 'city_name' => 'Kota Semarang', 'type' => 'Kota'],
-                ['city_id' => '27', 'province_id' => '8', 'province' => 'Jawa Tengah', 'city_name' => 'Kabupaten Semarang', 'type' => 'Kabupaten'],
-                ['city_id' => '28', 'province_id' => '8', 'province' => 'Jawa Tengah', 'city_name' => 'Kota Demak', 'type' => 'Kota'],
+        return [
+            'meta' => [
+                'message' => 'Success Get Domestic Destinations',
+                'code'    => 200,
+                'status'  => 'success',
+            ],
+            'data' => [
+                [
+                    'id' => '65043',
+                    'label' => 'Pindrikan Kidul, Semarang Tengah, Semarang, Jawa Tengah, 50241',
+                    'province_name' => 'Jawa Tengah',
+                    'city_name' => 'Semarang',
+                    'district_name' => 'Semarang Tengah',
+                    'subdistrict_name' => 'Pindrikan Kidul',
+                    'zip_code' => '50241'
+                ],
+                [
+                    'id' => '65042',
+                    'label' => 'Banjardowo, Semarang Tengah, Semarang, Jawa Tengah, 50242',
+                    'province_name' => 'Jawa Tengah',
+                    'city_name' => 'Semarang',
+                    'district_name' => 'Semarang Tengah',
+                    'subdistrict_name' => 'Banjardowo',
+                    'zip_code' => '50242'
+                ],
+                [
+                    'id' => '65005',
+                    'label' => 'Bojongsalaman, Semarang Barat, Semarang, Jawa Tengah, 50141',
+                    'province_name' => 'Jawa Tengah',
+                    'city_name' => 'Semarang',
+                    'district_name' => 'Semarang Barat',
+                    'subdistrict_name' => 'Bojongsalaman',
+                    'zip_code' => '50141'
+                ],
+                [
+                    'id' => '65006',
+                    'label' => 'Bongsari, Semarang Barat, Semarang, Jawa Tengah, 50148',
+                    'province_name' => 'Jawa Tengah',
+                    'city_name' => 'Semarang',
+                    'district_name' => 'Semarang Barat',
+                    'subdistrict_name' => 'Bongsari',
+                    'zip_code' => '50148'
+                ],
             ]
         ];
-
-        return $mockData;
     }
     
     public function getCost(string $origin, string $destination, int $weight, string $courier): array 
@@ -118,36 +155,43 @@ class RajaOngkirService
     private function getMockCosts(): array
     {
         return [
-            'rajaongkir' => [
-                'results' => [
-                    [
-                        'costs' => [
-                            [
-                                'service'     => 'OKE',
-                                'description' => 'Ongkos Kirim Ekonomis',
-                                'cost'        => [
-                                    ['value' => 65000, 'etd' => '3-6 hari']
-                                ],
-                                'etd'         => '3-6 hari'
-                            ],
-                            [
-                                'service'     => 'REG',
-                                'description' => 'Regular',
-                                'cost'        => [
-                                    ['value' => 95000, 'etd' => '2-3 hari']
-                                ],
-                                'etd'         => '2-3 hari'
-                            ],
-                            [
-                                'service'     => 'YES',
-                                'description' => 'Yakin Esok Sampai',
-                                'cost'        => [
-                                    ['value' => 145000, 'etd' => '1 hari']
-                                ],
-                                'etd'         => '1 hari'
-                            ]
-                        ]
-                    ]
+            'meta' => [
+                'message' => 'Success Calculate Domestic Shipping cost',
+                'code'    => 200,
+                'status'  => 'success',
+            ],
+            'data' => [
+                [
+                    'name' => 'Jalur Nugraha Ekakurir (JNE)',
+                    'code' => 'jne',
+                    'service' => 'CTC',
+                    'description' => 'JNE City Courier',
+                    'cost' => 9000,
+                    'etd' => '1 day'
+                ],
+                [
+                    'name' => 'Jalur Nugraha Ekakurir (JNE)',
+                    'code' => 'jne',
+                    'service' => 'JTR',
+                    'description' => 'JNE Trucking',
+                    'cost' => 40000,
+                    'etd' => '3 day'
+                ],
+                [
+                    'name' => 'Jalur Nugraha Ekakurir (JNE)',
+                    'code' => 'jne',
+                    'service' => 'CTCSPS',
+                    'description' => 'JNE City Courier',
+                    'cost' => 25000,
+                    'etd' => '0 day'
+                ],
+                [
+                    'name' => 'Jalur Nugraha Ekakurir (JNE)',
+                    'code' => 'jne',
+                    'service' => 'CTCYES',
+                    'description' => 'JNE City Courier',
+                    'cost' => 11000,
+                    'etd' => '1 day'
                 ]
             ]
         ];
