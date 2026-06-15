@@ -16,9 +16,9 @@ if (session()->getFlashData('success')) {
             <div class="col-lg-6">
                 <?= form_open('keranjang') ?>
                 <?= form_hidden([
-                    'id'    => $item['id'],
+                    'id'    => (string) $item['id'],
                     'nama'  => $item['nama'],
-                    'harga' => $item['harga'],
+                    'harga' => (string) $item['harga'],
                     'foto'  => $item['foto']]) ?>
                 <div class="card">
                     <div class="card-body">
