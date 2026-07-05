@@ -12,6 +12,24 @@
     'id'    => 'total_harga',
     'value' => (string) $total,
 ]) ?>
+<?= form_input([
+    'type'  => 'hidden',
+    'name'  => 'ppn',
+    'id'    => 'ppn',
+    'value' => '0',
+]) ?>
+<?= form_input([
+    'type'  => 'hidden',
+    'name'  => 'biaya_admin',
+    'id'    => 'biaya_admin',
+    'value' => '0',
+]) ?>
+<?= form_input([
+    'type'  => 'hidden',
+    'name'  => 'diskon_voucher',
+    'id'    => 'diskon_voucher',
+    'value' => '0',
+]) ?>
 
 <div class="col-12">
     <?= form_label('Nama', 'nama', ['class' => 'form-label']) ?>
@@ -52,6 +70,15 @@
     ]) ?>
 </div>
 <div class="col-12">
+    <?= form_label('Kode Voucher', 'voucher_code', ['class' => 'form-label']) ?>
+    <?= form_input([
+        'name'  => 'voucher_code',
+        'id'    => 'voucher_code',
+        'class' => 'form-control',
+        'value' => '']) ?>
+    <div class="form-text">Tersedia: FLASH10, FLASH15, MEMBER20</div>
+</div>
+<div class="col-12">
     <?= form_submit(
         'submit',
         'Buat Pesanan',
@@ -85,15 +112,35 @@
           endforeach;
       endif;
       ?>
-      <tr>
+        <tr>
           <td colspan="2"></td>
           <td>Subtotal</td>
-          <td><?= number_to_currency($total, 'IDR') ?></td>
+          <td><span id="summary_subtotal"><?= number_to_currency($total, 'IDR') ?></span></td>
       </tr>
       <tr>
           <td colspan="2"></td>
-          <td>Total</td>
-          <td><span id="total"><?= number_to_currency($total, 'IDR') ?></span></td>
+          <td>Diskon Voucher</td>
+          <td class="text-danger"><span id="summary_diskon">-IDR 0</span></td>
+      </tr>
+      <tr>
+          <td colspan="2"></td>
+          <td>PPN (11%)</td>
+          <td><span id="summary_ppn">IDR 0</span></td>
+      </tr>
+      <tr>
+          <td colspan="2"></td>
+          <td>Biaya Admin</td>
+          <td><span id="summary_admin">IDR 0</span></td>
+      </tr>
+      <tr>
+          <td colspan="2"></td>
+          <td>Subtotal setelah Voucher</td>
+          <td><span id="summary_subtotal_after">IDR <?= number_to_currency($total, 'IDR') ?></span></td>
+      </tr>
+      <tr>
+          <td colspan="2"></td>
+          <td>Grand Total</td>
+          <td><strong><span id="total"><?= number_to_currency($total, 'IDR') ?></span></strong></td>
       </tr>
   </tbody>
 </table>
@@ -106,15 +153,49 @@
 // Initialize variables
 let ongkir = 0;
 let subtotal = <?= (int) $total ?>;
+let voucherRates = {
+    FLASH10: 0.10,
+    FLASH15: 0.15,
+    MEMBER20: 0.20
+};
 
-// Hitung total harga
+function getVoucherRate(code) {
+    if (!code) return 0;
+    const normalized = code.trim().toUpperCase();
+    return voucherRates[normalized] || 0;
+}
+
+function hitungBiayaAdmin(totalHarga) {
+    if (totalHarga <= 20000000) {
+        return Math.round(totalHarga * 0.006);
+    }
+    if (totalHarga <= 40000000) {
+        return Math.round(totalHarga * 0.008);
+    }
+    return Math.round(totalHarga * 0.01);
+}
+
 function hitungTotal() {
-    let total = subtotal + ongkir;
+    const voucherCode = $("#voucher_code").val();
+    const voucherRate = getVoucherRate(voucherCode);
+    const diskonVoucher = Math.round(subtotal * voucherRate);
+    const ppn = Math.round(subtotal * 0.11);
+    const biayaAdmin = hitungBiayaAdmin(subtotal);
+    const subtotalAfter = subtotal - diskonVoucher + ppn + biayaAdmin;
+    const total = subtotalAfter + ongkir;
 
     $("#ongkir_display").val(ongkir.toLocaleString('id-ID'));
     $("#ongkir").val(ongkir);
+    $("#summary_subtotal").text(`IDR ${subtotal.toLocaleString('id-ID')}`);
+    $("#summary_diskon").text(`-IDR ${diskonVoucher.toLocaleString('id-ID')}`);
+    $("#summary_ppn").text(`IDR ${ppn.toLocaleString('id-ID')}`);
+    $("#summary_admin").text(`IDR ${biayaAdmin.toLocaleString('id-ID')}`);
+    $("#summary_subtotal_after").text(`IDR ${subtotalAfter.toLocaleString('id-ID')}`);
     $("#total").text(`IDR ${total.toLocaleString('id-ID')}`);
     $("#total_harga").val(total);
+    $("#ppn").val(ppn);
+    $("#biaya_admin").val(biayaAdmin);
+    $("#diskon_voucher").val(diskonVoucher);
 }
 
 // Initial calculation

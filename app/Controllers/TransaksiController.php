@@ -14,7 +14,7 @@ class TransaksiController extends BaseController
 
     public function __construct()
     {
-        helper(['number', 'form']);
+        helper(['number', 'form', 'Transaksi']);
         $this->cart = service('cart');
         $this->transactionModel = new \App\Models\TransactionModel();
         $this->transactionDetailModel = new \App\Models\TransactionDetailModel();
@@ -227,17 +227,26 @@ class TransaksiController extends BaseController
             $subtotal += $item['qty'] * $item['price'];
         }
 
+        $voucherCode = $this->request->getPost('voucher_code');
+        $diskonVoucher = hitung_diskon_voucher($subtotal, $voucherCode);
+        $ppn = hitung_ppn($subtotal);
+        $biayaAdmin = hitung_biaya_admin($subtotal);
         $ongkir = (int) $this->request->getPost('ongkir');
 
+        $totalHarga = $subtotal - $diskonVoucher + $ppn + $biayaAdmin + $ongkir;
+
         $transaction = [
-            'username'    => $this->request->getPost('username'),
-            'alamat'      => $this->request->getPost('alamat'),
-            'ongkir'      => $ongkir,
-            'total_harga' => $subtotal + $ongkir,
-            'status'      => 0, 
+            'username'       => $this->request->getPost('username'),
+            'alamat'         => $this->request->getPost('alamat'),
+            'ongkir'         => $ongkir,
+            'ppn'            => $ppn,
+            'biaya_admin'    => $biayaAdmin,
+            'voucher_code'   => $voucherCode ?: null,
+            'diskon_voucher' => $diskonVoucher,
+            'total_harga'    => $totalHarga,
+            'status'         => 0,
         ];
 
-        // insert transaction
         if (!$this->transactionModel->insert($transaction)) {
             $db->transRollback();
             return redirect()->back()->with('error', 'Gagal membuat transaksi');
@@ -245,7 +254,6 @@ class TransaksiController extends BaseController
 
         $transactionId = $this->transactionModel->getInsertID();
 
-        // insert transaction detail
         foreach ($cartItems as $item) {
             $this->transactionDetailModel->insert([
                 'transaction_id' => $transactionId,
@@ -262,7 +270,6 @@ class TransaksiController extends BaseController
             return redirect()->back()->with('error', 'Gagal membuat transaksi');
         }
 
-        //hapus session keranjang belanja 
         $this->cart->destroy();
         return redirect()->to(base_url())->with('success', 'Transaksi berhasil dibuat');
     }
